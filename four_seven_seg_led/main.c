@@ -1,6 +1,6 @@
 /*
-This is for program to display 0-9 digits every second on single 
-four seven segment led display with one 74HC594 shift register on 
+This is for program to display floting point number digits for 5 second
+on four seven segment led display with one 74HC594 shift register on 
 Raspberry Pi Pico board.
 -Akash
 */
@@ -89,12 +89,40 @@ void init_gpio_pins()
     gpio_set_dir(DIGIT_4_EN_PIN, GPIO_OUT);
 }
 
+void display_num(float num);
+
 int main() 
 {
     stdio_init_all();
     init_gpio_pins();
 
-    while (true) 
+    display_num(10.9999);
+
+    return 0;
+}
+
+void display_num(float num)
+{
+    int four_digits[4] = {0};
+    int int_part    = (int)num;
+    float fact_part = num - int_part;
+
+    for (int i = 1; i >= 0; i--)
+    {
+        four_digits[i] = int_part % 10;
+        int_part = int_part / 10;
+    }
+
+    for (int i = 2; i < 4; i++)
+    {
+        fact_part = fact_part * 10;
+        four_digits[i] = (int)fact_part;
+        fact_part = fact_part - (int)fact_part;
+    }
+
+    int count = 0;
+
+    while (count < 1000) // Run while loop for 5000ms -> 5 seconds
     {
         for (int i = 0; i < 4; i++) 
         {
@@ -102,13 +130,21 @@ int main()
             gpio_put(digit_pin_mapping[i], 1);
             // Check the logic of seven seg led before this step
             // GPIO pins are sending low signal and this is common anode system
-            send_byte(~bits[i]);
+            if (i == 1)
+            {
+                // toggle 7th bit to switch on Decimal point
+                uint8_t byte = (~bits[four_digits[i]]) ^ (1 << 7);
+                send_byte(byte);
+            }
+            else
+            {
+                send_byte(~bits[four_digits[i]]);
+            }
+
             latch_data();
-            sleep_ms(10);
+            sleep_ms(5);
+            count++;
             gpio_put(digit_pin_mapping[i], 0); // disable digit
-            // printf("Akash Gaikwad!\n");
         }
     }
-
-    return 0;
 }
